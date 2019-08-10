@@ -7,10 +7,10 @@ RUN apk --no-cache add nginx supervisor curl bash git make
 
 
 # Configure nginx
-COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./.docker/nginx/nginx.conf /etc/nginx/nginx.conf
 
 # Configure supervisord
-COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./.docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 RUN curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 
