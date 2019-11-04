@@ -1,23 +1,28 @@
-FROM node:11-alpine
-LABEL Maintainer="Hieupv <hieupv@codersvn.com>" \
-  Description="Lightweight container for angular application on Alpine Linux."
+FROM node:12.8-alpine AS builder
 
-# Install packages
-RUN apk --no-cache add nginx supervisor curl bash git make
-
-
-# Configure nginx
-COPY ./.docker/nginx/nginx.conf /etc/nginx/nginx.conf
-
-# Configure supervisord
-COPY ./.docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-RUN curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
-
-# Setup document root
-RUN mkdir -p /var/www/app
+RUN apk add --no-cache --virtual .gyp python make g++
 
 WORKDIR /var/www/app
 
-# Let supervisord start nginx & php-fpm
+COPY package.json yarn.lock ./
+
+RUN sed -i '/\@vicoders\/generator/d' ./package.json && yarn install && apk del .gyp
+
+COPY . .
+
+RUN cat src/environments/environment.prod.ts > src/environments/environment.ts && yarn build:ssr:prod
+
+
+FROM node:12.8-alpine
+LABEL Maintainer="Hieupv <hieupv@codersvn.com>" \
+  Description="Lightweight container for angular application on Alpine Linux."
+
+RUN apk --no-cache add supervisor bash
+
+COPY ./.docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./.docker/nginx/nginx.conf /etc/nginx/nginx.conf
+
+
+COPY --from=builder dist package*.json yarn* ./
+
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
